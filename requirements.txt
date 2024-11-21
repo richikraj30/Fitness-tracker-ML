@@ -12,3 +12,4 @@ ipython
 jupyter-client
 jupyter-core
 matplotlib
+seaborn
