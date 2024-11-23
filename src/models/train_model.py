@@ -170,13 +170,83 @@ for i, f in zip(range(len(possible_feature_sets)), feature_names):
     )
     score_df = pd.concat([score_df, new_scores])
 
-print(f"Best Performing model: {score_df["model"][0]} with accuracy: {score_df["accuracy"][0]}")
+score_df.sort_values(by="accuracy", ascending=False)
 
-# Since our best performing model is Random Forest, we will train our dataset one more time with
-# Forest
-class_train_y, class_test_y, class_train_prob_y, class_test_prob_y = learner.random_forest(X_train[feature_set_4], y_train, X_test[feature_set_4], gridsearch=True)
+print(f"Best Performing model: {score_df["model"].iloc[0]} with accuracy: {score_df["accuracy"].iloc[0]}")
+
+# Since our best performing model is Neural Networks, we will train our dataset one more time with NN
+# Trying NeuralNetwork model
+
+participant_df = df.drop([ "set", "category"], axis=1)
+
+X_train = participant_df[participant_df["participant"] != "A"].drop("label", axis=1)
+y_train = participant_df[participant_df["participant"] != "A"]["label"]
+
+X_test = participant_df[participant_df["participant"] == "A"].drop("label", axis=1)
+y_test = participant_df[participant_df["participant"] == "A"]["label"]
+
+X_train = X_train.drop("participant", axis=1)
+X_test = X_test.drop("participant", axis=1)
+
+fig, ax = plt.subplots(figsize=(10, 5))
+df_train["label"].value_counts().plot(
+    kind="bar",
+    color="lightblue",
+    ax=ax,
+    label = "Total"
+)
+y_train.value_counts().plot(kind="bar", ax=ax, color ="dodgerblue", label = "Train")
+y_test.value_counts().plot(kind="bar", ax=ax, color ="royalblue", label = "Test")
+
+plt.legend()
+plt.show()
+
+class_train_y, class_test_y, class_train_prob_y, class_test_prob_y = learner.feedforward_neural_network(X_train[feature_set_4], y_train, X_test[feature_set_4], gridsearch=False)
+
 accuracy = accuracy_score(y_test, class_test_y)
+
 classes = class_test_prob_y.columns
 
 # Confusion matrix
 cm = confusion_matrix(y_test, class_test_y, labels = classes)
+
+score_df = score_df.sort_values(by="accuracy", ascending=False)
+score_df["model"].iloc[0]
+
+
+output_dir = "../../reports/figures"
+os.makedirs(output_dir, exist_ok=True)
+
+# Create the confusion matrix plot
+plt.figure(figsize=(10, 10))
+plt.imshow(cm, interpolation="nearest", cmap=plt.cm.Blues)
+plt.title("Confusion matrix")
+plt.colorbar()
+tick_marks = np.arange(len(classes))
+plt.xticks(tick_marks, classes, rotation=45)
+plt.yticks(tick_marks, classes)
+
+# Add text annotations
+thresh = cm.max() / 2.0
+for i, j in itertools.product(range(cm.shape[0]), range(cm.shape[1])):
+    plt.text(
+        j,
+        i,
+        format(cm[i, j]),
+        horizontalalignment="center",
+        color="white" if cm[i, j] > thresh else "black",
+    )
+
+plt.ylabel("True label")
+plt.xlabel("Predicted label")
+plt.grid(False)
+
+# Ensure layout is finalized before saving
+plt.tight_layout()
+
+# Save the plot as an image
+output_file = os.path.join(output_dir, "confusion_matrix.png")
+plt.savefig(output_file, bbox_inches="tight")
+plt.close()  # Close the plot to free memory
+
+print(f"Confusion matrix saved to {output_file}")
